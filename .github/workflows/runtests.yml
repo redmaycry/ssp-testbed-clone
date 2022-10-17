@@ -22,6 +22,8 @@ jobs:
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
+      — uses: actions/checkout@v2
+
       - name: Create dir for binaries
         run: mkdir builds
 
@@ -39,7 +41,7 @@ jobs:
 
       # your code must be built into builds/ssp binary
       - name: Build SSP binary
-        run: go build -o builds/ssp ./cmd/main.go
+        run: go build -o builds/ssp cmd/main.go
 
       - name: Making it executable
         run: chmod +x builds/ssp
