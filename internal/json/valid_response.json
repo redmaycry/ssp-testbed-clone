@@ -1,0 +1,29 @@
+{
+  "id": "123",
+  "imp": [
+    {
+      "id": 123,
+      "width": 144,
+      "height": 122,
+      "title": "example1",
+      "url": "example.com",
+      "price": 123.5
+    },
+    {
+      "id": 123,
+      "width": 155,
+      "height": 133,
+      "title": "bestoption",
+      "url": "bestoption.com",
+      "price": 143.8
+    },
+    {
+      "id": 123,
+      "width": 155,
+      "height": 133,
+      "title": "notabestoption",
+      "url": "notabestoption.com",
+      "price": 100.8
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "id": "test",
+  "tiles": [
+    {
+      "id": 554,
+      "width": 100,
+      "ratio": 1.5
+    },
+	{
+      "id": 555,
+      "width": 300,
+      "ratio": 1.5
+    },
+	{
+      "id": 556,
+      "width": 300,
+      "ratio": 2.5
+    },
+	{
+      "id": 400,
+      "width": 100,
+      "ratio": 2.5
+    }
+  ],
+  "context": {
+    "ip": "192.168.1.1",
+    "user_agent": "curl"
+  }
+}
