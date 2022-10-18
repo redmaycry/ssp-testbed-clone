@@ -1,4 +1,5 @@
 # port for main server
+#ver
 port := 5053
 moc_server_address := 127.0.0.1:5059,127.0.0.1:5058
 
