@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -20,8 +21,8 @@ func main() {
 	}
 
 	http.HandleFunc("/bid_request", func(w http.ResponseWriter, r *http.Request) {
-		// b, _ := ioutil.ReadAll(r.Body)
-		// log.Println(string(b))
+		inc, _ := ioutil.ReadAll(r.Body)
+		log.Println(string(inc))
 		w.Header().Add("Content-Type", "application/json")
 		w.Write(file)
 	})

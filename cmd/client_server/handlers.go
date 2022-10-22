@@ -9,7 +9,7 @@ import (
 	"net/http"
 	customtypes "sample-choose-ad/cmd/custom_types"
 	req_types "sample-choose-ad/cmd/requests_types"
-	"sort"
+	"sync"
 )
 
 const PARTNER_ENDPOINT = "bid_request"
@@ -48,7 +48,10 @@ func parseAndCheckIncomingRequest(w http.ResponseWriter, r *http.Request) (req_t
 	if wrongIPAddresFormat(inpReqBody.Context.Ip) {
 		return inpReqBody, throwHTTPError("WRONG_SCHEMA", 400, &w)
 	}
-
+	// UserAgent validation
+	if len(inpReqBody.Context.UserAgent) == 0 {
+		return inpReqBody, throwHTTPError("EMPTY_FIELD", 400, &w)
+	}
 	return inpReqBody, err
 }
 
@@ -66,54 +69,64 @@ func handleRequest(partners []customtypes.PartnersAddress) http.HandlerFunc {
 
 		p_body := constructPartnersRequestBody(&incReq)
 
-		// Two data structures:
-		// partnersRespones for getting price with O(1) complexity
-		// []prices as slice of actual prices
-		partnersRespones := make(PartnersResponses)
-		prices := make(map[uint][]float64)
-
+		wg := new(sync.WaitGroup)
+		responsesCh := make(chan []req_types.RespImp, len(partners))
+		var respImps []req_types.RespImp
+		// Send requests to partners, collecting responses in `responses` channel
 		for _, p := range partners {
+			wg.Add(1)
 			url := fmt.Sprintf("http://%v:%v/%v", p.Ip, p.Port, PARTNER_ENDPOINT)
+			go makeRequest(url, &p_body, responsesCh, wg)
+		}
+		wg.Wait()
+		close(responsesCh)
 
-			re, err := sendRequest(url, &p_body)
-
-			if err != nil {
-				log.Println(err)
+		for r := range responsesCh {
+			respImps = append(respImps, r...)
+		}
+		// У нас нет одинаковых пар цена и ид
+		partnersRespones := make(map[uint]req_types.RespImp)
+		for _, resp := range respImps {
+			if _, exist := partnersRespones[resp.Id]; !exist {
+				partnersRespones[resp.Id] = resp
 				continue
 			}
-			// append only successful responses
-			for _, r := range re.Imp {
-				if partnersRespones[r.Id] == nil {
-					partnersRespones[r.Id] = make(map[float64]req_types.RespImp)
-				}
-				partnersRespones[r.Id][r.Price] = r
-				prices[r.Id] = append(prices[r.Id], r.Price)
+
+			// Replase with new Imp, if last saved price smaller
+			// Using type assertion, 'cause `Price` is interface
+			if partnersRespones[resp.Id].Price.(float64) < resp.Price.(float64) {
+				partnersRespones[resp.Id] = resp
 			}
-
 		}
 
-		if len(partnersRespones) == 0 {
-			log.Println("Error: no responses from partners.")
-			return
+		// { drop this
+		log.Println("respImps")
+		for _, i := range respImps {
+			log.Printf("%v : %v", i.Id, i.Price)
 		}
 
-		// Sorting prices, now biggest price at index len-1
-		for _, p := range prices {
-			sort.Float64s(p)
+		log.Println("partnersRespones")
+		for _, i := range partnersRespones {
+			log.Printf("%v : %v", i.Id, i.Price)
 		}
-
+		// }
 		var bestOptions []req_types.RespImp
 
+		// tile.Id == RespImp.Id
 		// for each tile peak best price
 		for _, tile := range incReq.Tiles {
-			if len(prices[tile.Id]) == 0 {
-				log.Println("No imp for tile ", tile.Id)
-				continue
+			if val, exist := partnersRespones[tile.Id]; exist {
+				bestOptions = append(bestOptions, val)
 			}
-			last := len(prices[tile.Id]) - 1
-			biggestPrice := prices[tile.Id][last]
-			bestOptions = append(bestOptions, partnersRespones[tile.Id][biggestPrice])
+
 		}
+
+		// if len(bestOptions) == 0 {
+		// 	// log.Println("Error: no responses from partners.")
+		// 	log.Println("Error: No Content")
+		// 	w.WriteHeader(http.StatusNoContent)
+		// 	return
+		// }
 
 		response := req_types.SuccesResponse{
 			Id:  *incReq.Id,
