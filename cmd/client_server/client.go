@@ -33,8 +33,8 @@ func makeRequest(url string, body *[]byte, response chan<- []req_types.RespImp, 
 	defer resp.Body.Close()
 
 	// maybe say smth to client?
-	if resp.StatusCode == 204 {
-		log.Println("No content")
+	if resp.StatusCode != 200 {
+		log.Println("Error: status code", resp.StatusCode)
 		return
 	}
 
